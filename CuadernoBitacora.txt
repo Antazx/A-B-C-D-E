@@ -162,6 +162,12 @@ Investigamos acerca de NIL_PROC, para ello hacemos en el mismo directorio grep N
 
 Hacemos lo mismo con rdy_head[] y vemos que es una lista de punteros a la primera posición de las colas.
 
-ready(): Mete un proceso al final de la cola de listos. Mantiene 3 colas, TASK_Q de mayor prioridad para los procesos del sistema, SERVER_Q de prioridad media para los procesos de los gestores de memoria, USER_Q de baja prioridad para los procesos de usuario. Investigamos acerca de istaskp(), definida en proc.h 
+ready(): Mete un proceso al final de la cola de listos. Mantiene 3 colas, TASK_Q de mayor prioridad para los procesos del sistema, SERVER_Q de prioridad media para los procesos de los gestores de memoria, USER_Q de baja prioridad para los procesos de usuario. Para ello identifica el tipo de proceso y lo mete en la cola correspondiente. Esto lo hace mediante istaskp(), isuserp().  Si la cola esta vacia lo meterá en la primera posición (cabeza), sino simplemente lo insertará en esta. Investigamos acerca de SHADOW_Q que es una cola adiccional que se usará si la constate alfanumérica SHADOWING tiene valor 1.
 
+unready(): Saca un proceso de la cola de listos, da a rdy_head[] el valor del siguiente proceso de la cola a traves de p_nextready. Despues invoca a pick_proc() que decidirá cual es el siguiente proceso que se ejecutará. La forma de expulsar el proceso de la cola, es buscarlo en esta y sustituirlo por el siguiente listo. En esta función tambien encontramos SHADOW_Q.
 
+-------------Jueves 24/3/2016
+
+Continuamos con la Práctica D.
+
+sched(): Se invoca a este método cuando un proceso ha estado demasiado tiempo en ejecución (ha superado el quantum). Inserta el proceso actual al final de la cola y pone el siguiente listo en la cabeza. Este método solo funciona con USER_Q. Después de esto invoca a pick_proc() para que decida cual será el siguiente proceso para ejecutar. 
