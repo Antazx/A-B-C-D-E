@@ -170,4 +170,6 @@ unready(): Saca un proceso de la cola de listos, da a rdy_head[] el valor del si
 
 Continuamos con la Práctica D.
 
-sched(): Se invoca a este método cuando un proceso ha estado demasiado tiempo en ejecución (ha superado el quantum). Inserta el proceso actual al final de la cola y pone el siguiente listo en la cabeza. Este método solo funciona con USER_Q. Después de esto invoca a pick_proc() para que decida cual será el siguiente proceso para ejecutar. 
+sched(): Se invoca a este método cuando un proceso ha estado demasiado tiempo en ejecución (ha superado el quantum). Inserta el proceso actual al final de la cola y pone el siguiente listo en la cabeza. Este método solo funciona con USER_Q, no se desalojan procesos de sistema ni de gestor de memoria. Después de esto invoca a pick_proc() para que decida cual será el siguiente proceso para ejecutar.
+
+
