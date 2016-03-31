@@ -1,0 +1,167 @@
+Guillermo Anta Alonso.
+Adrian Calvo Rojo.
+
+Grupo 11.
+
+
+---------------------Martes 9/2/2016
+
+	Hemos comenzado con la primera práctica, descargando e instalando Virtualbox y los archivos de disco Minix y el disquete con el nucleo. Hemos creado la maquina virtual añadiendo el disquete y teniendo en cuenta el orden en el que esta iba a arrancar. Desactivado arranque por CD. 
+
+Arrancamos la maquina y accedemos por primera vez como root. Conseguimos cambiar entre terminales con alt + Fi.
+
+
+	-Tutorial Vi:
+		
+		-esc	: Cambiamos de edición a modo comandos.
+		-i	: Cambiamos a modo edición en la posición del cursor.
+		-a	: Cambiamos a modo ediciñon en la siguiente posición a la del cursor.
+		-x	: Borra en la posición del cursor.
+		-:w	: Guardar.
+		-:q	: Salir.
+		-xyy	: Copia x lineas desde el cursor.
+		-p	: Pegar
+		-xdd	: Borra x lineas desde el cursor.
+		-/x	: Busca x en el archivo.
+		-:x	: Avanza hasta la linea x.
+		-%	: Cambia entre parejas de corchetes.
+		-u 	: Deshacer.
+		-!	: Forzar comando.
+		-ps -alx :Procesos en ejecución.
+		-xG	:Ir a la linea x.
+		-:rnombreDeFichero: copia un fichero desde la posición de cursor.
+
+
+Continuando con la práctica, copiamos los archivos de imagen y disquete en otro directorio y cambiamos el UUID con "VBoxManage internalcommands sethuuid minix...vdi"
+
+Cambiamos el shell por defecto a ash, editando /etc/passwd y sustituyendo sh por ash en la primera linea, creamos otro usuario añadiendo la linea "login:contraseña:9:3: Datos usuario:Directorio del usuario:"
+
+Reiniciamos con el comando "shutdown -r now" o con "reboot".
+Apagamos con el comando "shutdown -h now".
+
+Cambiamos el mensaje de inicio del terminal editando el archivo /usr/src/kernel/tty.c (linea 146). Nos movemos al directorio usr/src/tools y compilamos el núcleo con el comando "make hdboot". Vemos que la revisión ha cambiado y se ha copiado el nuevo núcleo a /minix.
+
+El mensaje no ha cambiado, nos damos cuenta de que en la segunda maquina estabamos arrancando desde disquete por lo que las modificaciones hechas no tenian ningún efecto, cambiamos el orden de arranque y vemos que el mensaje también ha cambiado.
+
+Siguiendo el guión hacemos el programa a.out, necesitamos investigar sobre la función fork(), comprendemos que crea una copia exacta de el programa actual en otra posición de memoria y que devuelve el PID del hijo creado. Gestionaremos los errores con "errno".
+
+El programa recibe un argumento de tipo entero y crea tantos procesos como indica este, cada hijo ejecuta la función hijo y termina. El padre espera a que todos terminen.
+
+Modificamos la constante NR_PROCS (usr/include/minix/config.h) de 40 a 50 para cambiar el número de hijos que pueden crearse que en un principio eran 27. Compilamos y reiniciamos.
+
+
+-------------Martes 23/2/2016
+
+Comenzamos la práctica B. Grupo 11. Muestra el número de procesos actuales, modificamos el programa anterior para que cada hijo efecute una función en vez de no hacer nada. Solucionado, ahora se pueden ejecutar 36 hijos. Ahora si comenzamos la práctica B. 
+
+
+Vamos a hacer el seguimiento de una llamada a fork():
+
+1-(Modo Usuario) Cuando llamamos a fork() (/usr/src/lib/posix/_fork.c)  desde un programa se efectua una llamada a la función _syscall(MM, FORK, &m).
+
+	-Sabemos que la función fork() devuelve el PID del hijo que recive
+	el padre al ejecutar la llamada, indagamos en el codigo de otras
+	llamadas al sistema como exit() o wait() y 
+	vemos que se repite la llamada a _syscall(MM,[algo],&m), variando
+	[algo] en funcion del tipo de llamada que se realiza.
+
+2-(Modo Usuario) La función _syscall() (/usr/src/lib/other/syscall.c) llama a la función _sendrec() que también envia un mensaje a un servidor (en este caso también MM).
+
+	-El parámetro m declarado en fork(), se define en la función
+	_syscall(), llenando el campo m_type (m_source:
+	emisor del mensaje y m_type tipo de mensaje), a _sendrec() se le 
+	pasa el servidor que tratará la excepción MM y el mensaje con el 
+	tipo ya definido.
+
+3-(Modo Usuario) En _sendrec() (/usr/src/lib/i386/rts/_sendrec.s) en ensamblador,  encontramos la interrupción de software int SYSVEC.
+
+	-En esta encontramos las instrucciones push, mov, pop las cuales 
+	guardan en pila, mueven entre registros y memoria y sacan de la
+	pila. Encontramos también SYSVEC = 33. A partir de este punto el 
+	procesador pasa a Modo Privilegiado.
+
+
+4-(Modo Privilegiado) Se comienza a tratar la interrupción, la función prot_init() (/usr/src/kernnel/protect.c) inicializa la tabla de vectores de interrupción, encontramos una llamada a la función s_call(). Y una mención a SYS386_VECTOR (src/kernel/const.h) en el cual se define con el valor de SYSVEC (en este caso 33).
+	
+5-(Modo Privilegiado) La función s_call()(usr/src/kernel/mpx386.s) llama a la función sys_call() (call _sys_call), la cual será encargada de de enviar el mensaje al servidor ( en este caso MM) y el mensaje (en este caso FORK) 
+6-(Modo Privilegiado) Una vez enviado el mensaje se ejecuta _restart() (usr/src/kernel/mpx386.s). Esta función permite continuar la ejecución de otro proceso, que en este caso es MM ya que ha de tratar el mensaje mandado por sys_call(). En este punto el procesador vuelve a Modo Usuario.
+
+7-(Modo usuario) El main de MM (/usr/src/mm/main.c) queda a la espera de recibir un mensaje ejecutando en un bucle infinito get_work(), una vez recibido llama a la función que ha de tratarlo a traves de el vector de funciones call_vec[].
+
+-------------------Miercoles 24/2/2016
+
+Vamos a buscar la función del gestor de memoria que se ejecuta cuando se recibe la llamada al sistema fork():
+
+Lo primero que hacemos es cd /usr/src/mm y ls para ver el contenido de la carpeta del gestor de memoria. Creemos que lo mejor es comenzar analizando el codigo de main.c, vemos que la función mm_init() inicializa las variables que usará el gestor de memoria, en esta función encontramos los printf con la información de memoria que encontramos al arrancar el sistema (Memory, MINIX, RAM, Available). Lo siguiente que hace el gestor de memoria es ejecutar en un bucle infinito get_work() (como ya habiamos visto en la parte anterior), la cual espera al siguiente mensaje (mediante la función receive(ANY, &mm_in), y extrae la información necesaria de este, who = mm_in.m_source que será el que envia el mensaje y mm_call = mm_in.m_type que es el tipo de mensaje enviado call number, que para fork() será 2, definido en /usr/include/minix/callnr.h, este es un valor valido:
+
+	if (mm_call < 0 || mm_call >= NCALLS){
+		error = EBADCALL;
+	else
+		error = (*call_vec[mm_call])();
+
+Lo siguiente que se nos ocurre es buscar por el vector call_vec[] en el directorio del gestor de memoria (usr/src/mm), hacemos grep call_vec * para buscar en todos los archivos del directorio, que nos devuelve los archivos glo.h, main.c y table.c con la linea _PROTOTYPE (int (*call_vec[NCALLS]),(void) )... buscaremos en este último (usr/src/mm/table.c) encontramos el vector *call_vec[NCALLS], el cual tiene en la posición 2, do_fork. Repetiremos el proceso anterior y buscaremos do_fork en el directorio, grep do_fork *, que nos devuelve los archivos forkexit.c y proto.h con la linea _PROTOTYPE( int do_fork, (void));, buscaremos en este último (usr/src/mm/proto.h), solo encontramos el prototipo de la función, buscaremos en forkexit.c (usr/src/mm/forkexit.c), encontramos do_fork() y una constate que habiamos modificado anteriormente NR_PROCS en la siguiente linea:
+
+	if (procs_in_use == NR_PROCS) return(EAGAIN);
+
+Lo que explica porque cuando cambiamos en la práctica anterior el valor se nos permitia crear más procesos al ejecutar a.out. Añadimos un printf en la función do_fork(), vamos a comprobar si saluda ejecutando a.out, no funciona, se nos ha olvidado compilar el núcleo, hacemos make hdboot desde (usr/src/tools), compila sin problemas, la imagen se ha copiado en /dev/hd1a:/minix/2.0.0r14, vamos a comprobar si funciona de nuevo. Funciona, no hace falta ejecutar a.out al reiniciar encontramos el mensaje de saludo muchas veces en la pantalla, suponemos casi sin miedo a equivocarnos que esto es debido a que se crean muchos procesos para el Sistema Operativo. Modificamos el printf para añadir un salto de linea al dinal del mensaje para que todo resulte un poco más legible. Compilamos y reiniciamos. 2.0.0r15.
+
+Cada vez que ejecutamos un comando aparace el mensaje. Con cd no pasa????. Explicación: Porque cd es una rutina del shell, no hace falta crear un proceso.
+
+------------------Martes 1/3/2016:
+
+Práctica C: Vamos a crear una nuemva llamada al sistema, ESOPS, la cual modificara e imprimirá los parámetros que reciba del mensaje. Esta llamada pasará del Usuario (nivel4) -> MM (nivel 3) -> SYSTEM (nivel 2-1) -> MM (nivel 3) -> Usuario (nivel 4).
+
+Lo primero que haremos será añadir la constante alfanumerica que identificará a nuestra llamada en el sistema (usr/include/minix/callnr.h) que será la 77 ESOPS. 
+
+En src/usr/mm/main.c encontramos el bucle infinito que espera un mensaje, que cuando recibe pasa a buscarlo en call_vec[] con el número de llamada al sistema (77 en el caso de ESOPS), la función call_vec[] inicializada en /usr/src/mm/table.c es el lugar donde tendremos que añadir la entrada correspodiente a nuestra funcion. 
+
+Para que nuestra función sea operativa debemos añadir el prototipo de la misma en /usr/src/mm/proto.h y escribir el codio do_esops en /usr/src/mm/utility.c que lo que hará es: imprimir los valores que llegan al gestor de memoria MM, invocar a la tarea del sistema y guardar los cambios realizados. 
+
+Aprendemos que los structs de tipo message usan las constantes m1_i1, m1_i2... definidas en /usr/include/minix/type.h y que en este caso el argumento es un puntero a mensaje por lo que es necesario usar -> y no . para acceder a estos campos. También que mm_in y mm_out son estructuras globales para el envio y recepción de mensajes desde MM.
+
+En /usr/src/kernel/system.c añadimos la linea en sys_task():
+
+	case ESOPS:	r = do_esops(&m); break;
+
+Más adelante en el mismo archivo escribimos la función do_esops(), que será la que ejecute el kernel y lo que hará será recibir los parámetros del mensaje que le pasa el gestor de memoria y sumarle al primer campo 10, al segundo 100 y al tercero 100 e imprimir los valores antes y despues de ser modificados. Compilamos el kernel y reiniciamos (2.0.0r16).
+
+---------------Domingo 6/3/2016
+
+Continuando con la práctica C, creamos el fichero PracticaC.c (root/Practicas/Practica-C) en el cual incluimos los ficheros de cabecera: 
+
+<stdio.h>, <lib.h>, <sys/types.h>, <unistd.h> y <minix/syslib.h> 
+
+Declaramos una variable del tipo mensaje e inicializamos los tres primeros campos con 1, 2 y 3. Utilizamos la función _taskcall(MM,ESOPS,&msg); para realizar la llamada al sistema, imprimos los valores de los campos. Compilamos, reinicioamos y ejecutamos. Problema: No sabemos desde donde se estan imprimiendo los parámetros del mensaje, añadimos identificadores, compilamos el nucleo y reiniciamos (2.0.0r17). Perfecto, ahora se ve desde que parte se imprimen los valores del mensaje. 
+
+Tercera parte: vamos a añadir nuestra propia llamada al sistema, para ello pasamos un argumento a nuestra función ESOSP, dependiendo de el valor del argumento invocaremos a una u otra función. Para ello escribimos nuestra nueva función en /usr/src/kernel/system.c y añadimos en ESOPS un switch que actuará de distribuidor. Por lo tanto no es necesario incrementar la variable NCALLS, ya que la llamada será gestionada a traves de ESOPS. Escribimos el codigo de NEWCALL para que nos devuelva el PID y el nombre del proceso en ejecución.
+
+---------------Martes 8/3/2016
+
+Revisando el apartado anterior nos damos cuenta de que no devolvemos los valores modificados desde el kernel, lo arreglamos en (usr/src/kernel/system.c), compilamos y reiniciamos. No compila porque tenemos varias llamadas a
+NEWCALL la cual no está todavia terminada. Aprovechamos para quitar el mensaje que imprimia do_fork() realizado en la prácticaB para ver el terminal mas claro. (2.0.0r18). 
+
+Despues compilamos y reiniciamos para ver si funciona, no funciona debido a un error de sintaxis, solucionado, imprimimos pid y nombre del proceso en ejecucion.(2.0.0r20).
+
+---------------Viernes 11/3/2016
+
+Seguimos intentando que nuestra nueva llamada al sistema devuelva más información del proceso que está en ejecución, como el tiempo que lleva ejecutandose etc.. Añadimos estas nuevas caracteristicas, compilamos y reiniciamos (2.0.0r21). No sale el tiempo, intentamos solucionarlo, CyR (2.0.0r22), no lo conseguimos. (2.0.0r23), seguimos en ello (2.0.0r24). Lo medio conseguimos.
+
+--------------Martes 15/3/2016
+
+Terminamos la practica C (2.0.0r25), imprimimos, nombre del proceso, PID, user_time y sys_time.
+
+Comenzamos con la práctica D, leyendo las funciones pick_proc(), ready(), unready(), sched() (usr/src/kernel/proc.c) 
+
+PROBLEMA: Hemos modificado la práctica C (Y la entrada del Bitacora) para que  desde do_esops()  invoque a la función que se le indique en el argumento que se le pase, siendo 100 do_newcall(). (2.0.0r26).
+
+pick_proc(): Es la encargada de decidir a que proceso de la cola de listos se le va a asignar CPU, nos fijamos que la prioridad asignada es TASK_Q > SERVER_Q > USER_Q, por tanto la función tratará de asignar CPU a los procesos listos de la tarea del sistema, después de las tareas de MM y FS y por último de las tareas de usuario. Encontramos en esta función proc_ptr y bill_ptr, siendo proc_ptr la utilizada en do_newcall() para imprimir los datos del proceso actual en ejecución, se nos ocurre sustituir proc_ptr por bill_ptr, compilamos y reiniciamos (2.0.0r27). Ejecutamos practicaC y le pasamos como argumento 100 para que desde do_esops se invoque a NEWCALL. Vemos que el nombre que imprime es SYS y el PID 0.
+
+-------------Miercoles 16/3/2016
+
+Investigamos acerca de NIL_PROC, para ello hacemos en el mismo directorio grep NIL_PROC * | more y vemos que NIL_PROC está definido en proc.h y que es un casting del tipo ((struct proc *) 0), es decir de 0 a struct proc *.
+
+Hacemos lo mismo con rdy_head[] y vemos que es una lista de punteros a la primera posición de las colas.
+
+ready(): Mete un proceso al final de la cola de listos. Mantiene 3 colas, TASK_Q de mayor prioridad para los procesos del sistema, SERVER_Q de prioridad media para los procesos de los gestores de memoria, USER_Q de baja prioridad para los procesos de usuario. Investigamos acerca de istaskp(), definida en proc.h 
+
+
