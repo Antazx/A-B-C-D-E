@@ -174,4 +174,28 @@ sched(): Se invoca a este método cuando un proceso ha estado demasiado tiempo e
 
 Vamos a leer y analizar las funciones: init_clock(), clock_handler(), clock_task(), do_clocktick() en usr/src/kernel/clock.c e interrupt() en usr/src/kernel/proc.c.
 
-La primera función que encontramos es init_clock() encargada de inicializar el reloj y hacer que funcionen de manera continua, carga el tiempo en el canal 0 y elije quien será el encargado de manejar las interrupciones del reloj (clock_handler()).
+La primera función que encontramos es init_clock() encargada de inicializar el reloj y hacer que funcionen de manera continua, carga el tiempo en el canal 0 y elije quien será el encargado de manejar las interrupciones del reloj (clock_handler()), del tipo del chip depende la inicialización de este método.
+
+-----------Viernes 1/4/2016
+
+Después analizamos clock_handler(), encargada de manejar el reloj, incrementando el tiempo de los porcesos de sistema y de generar una interrupción cuando se agota el queantum. Cambia el valor de ticks de la siguiente forma:
+	
+	ticks = lost_ticks + 1; y lost_ticks = 0; pending_ticks += ticks;
+
+También modifica la variable now de tipo clock_t:
+
+	now = realtime + pending_ticks; 
+
+La variable realtime se actualiza desde la función clock_task() ya que está protegida, es la variable utilizada para determinar si ha de producirse una interrupción if (next_alarm <= now) o porque se agota el quantum del proceso, determinado por la variable sched_ticks, si llega a 0 se vuelve a reiniciar el quantum.
+
+Pasamos a analizar clock_task(), encargada de la gestiónde las tareas del reloj. Inicializa el reloj mendiante una llamada a init_clock(), después entra en un bucle infinito en el que actualiza de forma protegida mediante lock() y unlock() es decir:
+
+	lock();
+	realtime += pending_ticks;
+	pending_ticks = 0;
+	unlock();
+
+También actua como distribuidor de funciones relacionadas con con las interrupciones de reloj. 
+
+
+Veremos ahora do_clocktick() que es invocada desde clock_task() cuando el opcode es HARD_INT 
