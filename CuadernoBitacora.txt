@@ -198,4 +198,10 @@ Pasamos a analizar clock_task(), encargada de la gestiónde las tareas del reloj
 También actua como distribuidor de funciones relacionadas con con las interrupciones de reloj. 
 
 
-Veremos ahora do_clocktick() que es invocada desde clock_task() cuando el opcode es HARD_INT 
+Veremos ahora do_clocktick() que es invocada desde clock_task() cuando el opcode es HARD_INT, por error escribimos un comando del tipo comando() y vemos que se abre una especie de editor de texto, nos damos cuenta de que podemos crear nuestro propio comando personalizado, lo primero que se nos ocurre es un comando para que el nucleo compile automaticamente. Lo hemos llamado compilanucleo. Siguiendo con la práctica deducimos que la utilidad de do_clocktick() es comprobar si se han producido interrupciones y tratarlas. Encontramos una llamada a la función lock_sched() definida en proc.c, la cual realiza una llamada a sched() pero cambiando el valor de la variable switching a TRUE antes de hacer la llamada y volviendo a cambiarlo a FALSE después de hacerla.
+
+Analizamos ahora interrupt() y vemos que es una función invocada cuando el quantum de un proceso se agota. Si k_reentrer != 0 o switching tiene valor TRUE, el proceso se añade a una cola de retenidos. Si el proceso espera una interrupción se bloquea, se manda el mensaje HARD_INT desde HARDWARE y se añade rp a TASK_Q.
+
+Consultamos ahora la inicialización de la variable sched_ticks que es la que contigene los ticks restantes del proceso en ejecución. Encontramos en su deficinición (MILLISEC*HZ/1000), buscamos el valor de HZ, la encontramos en /usr/include/minix/const.h con un valor de 60. Por lo tanto la variable SCHED_RATE = 6;
+
+Vamos a crear el programa para crear 3 hilos ligeros (1seg) y 1 pesado (10-20seg) 
