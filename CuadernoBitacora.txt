@@ -204,4 +204,4 @@ Analizamos ahora interrupt() y vemos que es una función invocada cuando el quan
 
 Consultamos ahora la inicialización de la variable sched_ticks que es la que contigene los ticks restantes del proceso en ejecución. Encontramos en su deficinición (MILLISEC*HZ/1000), buscamos el valor de HZ, la encontramos en /usr/include/minix/const.h con un valor de 60. Por lo tanto la variable SCHED_RATE = 6;
 
-Vamos a crear el programa para crear 3 hilos ligeros (1seg) y 1 pesado (10-20seg) 
+Vamos a crear el programa para crear 3 hilos ligeros (1seg) y 1 pesado (10-20seg). Hemos conseguido terminar el programa, los ligeros tardan alrededor de 1 segundo y el pesado alrededor de 14 segundos.
