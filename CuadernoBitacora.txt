@@ -205,3 +205,8 @@ Analizamos ahora interrupt() y vemos que es una función invocada cuando el quan
 Consultamos ahora la inicialización de la variable sched_ticks que es la que contigene los ticks restantes del proceso en ejecución. Encontramos en su deficinición (MILLISEC*HZ/1000), buscamos el valor de HZ, la encontramos en /usr/include/minix/const.h con un valor de 60. Por lo tanto la variable SCHED_RATE = 6;
 
 Vamos a crear el programa para crear 3 hilos ligeros (1seg) y 1 pesado (10-20seg). Hemos conseguido terminar el programa, los ligeros tardan alrededor de 1 segundo y el pesado alrededor de 14 segundos.
+
+Nos disponemos a crear la función cambiaQ. Vamos a llamar a esta funcion directamente desde system.c.
+Para ello lo que hacemos es crear en el fichero clock.c la funcion cambiarQ(nq), esta funcion recibira como parametro un int que asignara directamente a la variable sched_ticks.
+Ahora dentro de system.c llamamos a la funcion anterior pasandole el mensaje que se generará en m1_i2. Solo necesitamos llamar a esta función desde el repartidor para conseguir que funcione.
+
