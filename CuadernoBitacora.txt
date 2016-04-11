@@ -204,9 +204,43 @@ Analizamos ahora interrupt() y vemos que es una función invocada cuando el quan
 
 Consultamos ahora la inicialización de la variable sched_ticks que es la que contigene los ticks restantes del proceso en ejecución. Encontramos en su deficinición (MILLISEC*HZ/1000), buscamos el valor de HZ, la encontramos en /usr/include/minix/const.h con un valor de 60. Por lo tanto la variable SCHED_RATE = 6;
 
+-----------Viernes 8/4/2016
+
 Vamos a crear el programa para crear 3 hilos ligeros (1seg) y 1 pesado (10-20seg). Hemos conseguido terminar el programa, los ligeros tardan alrededor de 1 segundo y el pesado alrededor de 14 segundos.
 
-Nos disponemos a crear la función cambiaQ. Vamos a llamar a esta funcion directamente desde system.c.
+Nos disponemos a crear la función cambiarQ(). Vamos a llamar a esta funcion directamente desde system.c.
 Para ello lo que hacemos es crear en el fichero clock.c la funcion cambiarQ(nq), esta funcion recibira como parametro un int que asignara directamente a la variable sched_ticks.
 Ahora dentro de system.c llamamos a la funcion anterior pasandole el mensaje que se generará en m1_i2. Solo necesitamos llamar a esta función desde el repartidor para conseguir que funcione.
+
+-----------Lunes 11/4/2016
+
+Despues de pensar que no conseguiamos llegar hasta la ultima funcion en clock.c:cambiarQ(), tras hacer algunas comprobaciones en las funciones y poner varios printf() por los tramos que pasa la llamada... conseguimos que funcione y que llegue a cambiar la variable sched_ticks. Para hacer llegar hasta la funcion de cambiar el cuanto hemos creado una variable alfanumerica a la cual hemos asignado el valor 1. De esta forma escribimos una llamada a la funcion system.c:do_esops() enviando el valor 1 y el valor del nuevo cuanto para cambiarlo.
+
+Vamos a comprobar ahora el efecto que tiene cambiar este cuanto; ejecutamos primero el programa que creaba 3 hilos ligeros y uno pesado.
+Tenemos unos printf de tal forma que vemos cuando empieza y cuando acaba el hilo. Si lo ejecutamos sin cambiar nada, lo que ocurre es lo siguiente:
+
+Se crea proceso pesado
+Se crea proceso ligero
+Acaba proceso ligero (1 segundo)
+Se crea proceso ligero
+Acaba proceso ligero (1 segundo)
+Se crea proceso ligero
+Acaba proceso ligero (1 segundo)
+Acaba proceso pesado (21 segundos)
+
+Ahora ponemos un cuanto de 200000 y volvemos a ejecutar el mismo programa, pasa esto:
+
+Se crea proceso pesado
+Acaba proceso pesado (21 segundos)
+Se crea proceso ligero
+Acaba proceso ligero (1 segundo)
+Se crea proceso ligero
+Acaba proceso ligero (1 segundo)
+Se crea proceso ligero
+Acaba proceso ligero (1 segundo)
+
+Comprobado, todo funciona correctamente. Al cambiar el cuanto lo que conseguimos es cambiar de RR a FIFO, por tanto hasta que no finalice un proceso, no empieza el siguiente.
+
+
+
 
