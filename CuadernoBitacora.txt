@@ -239,7 +239,12 @@ Acaba proceso ligero (1 segundo)
 Se crea proceso ligero
 Acaba proceso ligero (1 segundo)
 
-Comprobado, todo funciona correctamente. Al cambiar el cuanto lo que conseguimos es cambiar de RR a FIFO, por tanto hasta que no finalice un proceso, no empieza el siguiente.
+Comprobado, todo funciona correctamente. Al cambiar el cuanto lo que conseguimos es cambiar de RR a FIFO, por tanto hasta que no finalice un proceso, no empieza el siguiente. Aqui se acaba la práctica D.
+
+-----------Martes 12/4/2016
+
+Empezamos la practica E. Para ellos nos dirigimos al gestor de memotria de minix en /usr/src/mm/. Como tenemos que imprimir la lista hole_head y la tabla de segmentos de las tareas del sistema cuando se inicie la memoria, nos dirigimos al archivo /usr/src/mm/alloc.c donde estan definidos el numero de holes asi como su estructura (almacena dónde empieza, qué tamaño tiene y un puntero hacia el siguiente).
+Tenemos que llamar a la funcion que creemos desde /usr/src/mm/main.c:mm_init(). 
 
 
 
