@@ -254,4 +254,8 @@ Una vez hechas las dos funciones, solo nos queda añadir la llamada al repartido
 
 Hemos retocado el distribuidor de MM para que cuando hacemos la llamada a ESOPS pasando como primer argumento 3, y como segundo 0 imprima todas las tablas de segmentos de los procesos y que si el segundo argumento es un 1 imprima solo las del proceso que lo invoca a MM. De esta manera continuamos con la ultima parte de la práctica E.
 
-Creamos el programa para monitorizar el funcionamiento de FORK.
+Creamos el programa para monitorizar el funcionamiento de FORK, lo primero que hacemos es invocar la función que muestra hole_head mediandte una llamada a ESOPS pasandole como primer argumento MEMLIBRE, El siguiente paso es invocar a FORK, e imprimir las tablas de segmentos para el padre y para el hijo, haciendo una llamada a ESOPS pasandole como primer argumento IMPRIME_SEG y como segundo argumento 1. Compilamos y comprobamos que funciona.
+
+-------Viernes 15/4/2016
+
+Aunque parezca difícil y después de mucho darle vuelta a algunos problemas hemos conseguido completar todas las prácticas, finalizando con un MINIX "personalizado" que dispone de los dos distribuidores tanto el del gestor de memoria, como el del núcleo, con comandos como MemLibre y cambiaQ y a mayores algunos añadidos por nuestra propia comodidad como compilanucleo, que nos permite compilar desde cualquier directorio. Finalizamos así con la etapa de prácticas A-B-C-D-E.
